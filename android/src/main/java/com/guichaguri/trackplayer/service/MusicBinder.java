@@ -21,6 +21,10 @@ public class MusicBinder extends Binder {
     public void post(Runnable r) {
         service.handler.post(r);
     }
+    
+    public boolean isReadyForPost() {
+        return service != null && service.handler != null;
+    }
 
     public ExoPlayback getPlayback() {
         ExoPlayback playback = manager.getPlayback();
