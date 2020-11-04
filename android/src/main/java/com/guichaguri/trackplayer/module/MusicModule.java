@@ -67,7 +67,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        synchronized (this) {
+        synchronized(this) {
             binder = (MusicBinder) service;
             connecting = false;
 
@@ -85,7 +85,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        synchronized (this) {
+        synchronized(this) {
             binder = null;
             connecting = false;
         }
@@ -120,7 +120,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
     }
 
     private void runOnConnectionOrReject(final Promise callback, Runnable r) {
-        if(binder != null) {
+        if(isBinderReady()) {
             binder.post(r);
         } else {
             callback.reject("playback", "The playback is not initialized");
@@ -136,6 +136,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
 
         // Capabilities
         constants.put("CAPABILITY_PLAY", PlaybackStateCompat.ACTION_PLAY);
+        constants.put("CAPABILITY_TOGGLE_PLAY_PAUSE", PlaybackStateCompat.ACTION_PLAY_PAUSE);
         constants.put("CAPABILITY_PLAY_FROM_ID", PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID);
         constants.put("CAPABILITY_PLAY_FROM_SEARCH", PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH);
         constants.put("CAPABILITY_PAUSE", PlaybackStateCompat.ACTION_PAUSE);
@@ -182,12 +183,9 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
 
     @ReactMethod
     public synchronized void destroy() {
-        // Ignore if it was already destroyed
-        if (binder == null && !connecting) return;
-
         try {
-            synchronized (this) {
-                if (binder != null) {
+            synchronized(this) {
+                if(binder != null) {
                     binder.destroy();
                     binder = null;
                 }
@@ -269,6 +267,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                 callback.reject("playback", "The playback is not initialized");
                 return;
             }
+
             List<Track> queue = binder.getPlayback().getQueue();
             List<Integer> indexes = new ArrayList<>();
 
@@ -491,12 +490,15 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                     return;
                 }
                 List<Track> tracks = binder.getPlayback().getQueue();
-                for (Track track : tracks) {
-                    if (track.id.equals(id))
-                    callback.resolve(Arguments.fromBundle(track.originalItem));
-                    return;
+
+                for(Track track : tracks) {
+                    if(track.id.equals(id)) {
+                        callback.resolve(Arguments.fromBundle(track.originalItem));
+                        return;
+                    }
                 }
-                    callback.resolve(null);
+
+                callback.resolve(null);
             });
         } else {
             callback.resolve(null);
@@ -514,9 +516,10 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                 List queue = new ArrayList();
                 List<Track> tracks = binder.getPlayback().getQueue();
 
-                for (Track track : tracks) {
+                for(Track track : tracks) {
                     queue.add(track.originalItem);
                 }
+
                 callback.resolve(Arguments.fromList(queue));
             });
         } else {
@@ -533,7 +536,8 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                     return;
                 }
                 Track track = binder.getPlayback().getCurrentTrack();
-                if (track == null) {
+
+                if(track == null) {
                     callback.resolve(null);
                 } else {
                     callback.resolve(track.id);
@@ -552,11 +556,12 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                     callback.resolve(Utils.toSeconds(0));
                     return;
                 }
-                long position = binder.getPlayback().getBufferedPosition();
-                if (position == C.TIME_UNSET) {
+                long duration = binder.getPlayback().getDuration();
+
+                if(duration == C.TIME_UNSET) {
                     callback.resolve(Utils.toSeconds(0));
                 } else {
-                    callback.resolve(Utils.toSeconds(position));
+                    callback.resolve(Utils.toSeconds(duration));
                 }
             });
         } else {
@@ -573,7 +578,8 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                     return;
                 }
                 long position = binder.getPlayback().getBufferedPosition();
-                if (position == C.POSITION_UNSET) {
+
+                if(position == C.POSITION_UNSET) {
                     callback.resolve(Utils.toSeconds(0));
                 } else {
                     callback.resolve(Utils.toSeconds(position));
@@ -590,11 +596,12 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
         if(isBinderReady()) {
             binder.post(() -> {
                 if (binder == null) {
-                    callback.reject("unknown", "Unknown position");
-                    return;
+                  callback.reject("unknown", "Unknown position");
+                  return;
                 }
                 long position = binder.getPlayback().getPosition();
-                if (position == C.POSITION_UNSET) {
+
+                if(position == C.POSITION_UNSET) {
                     callback.reject("unknown", "Unknown position");
                 } else {
                     callback.resolve(Utils.toSeconds(position));
