@@ -507,13 +507,14 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
 
     @ReactMethod
     public synchronized void getQueue(Promise callback) {
+        List queue = new ArrayList();
+
         if(isBinderReady()) {
             binder.post(() -> {
                 if (binder == null) {
-                    callback.resolve(new ArrayList());
+                    callback.resolve(Arguments.fromList(queue));
                     return;
                 }
-                List queue = new ArrayList();
                 List<Track> tracks = binder.getPlayback().getQueue();
 
                 for(Track track : tracks) {
@@ -523,7 +524,7 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
                 callback.resolve(Arguments.fromList(queue));
             });
         } else {
-            callback.resolve(new ArrayList());
+            callback.resolve(Arguments.fromList(queue));
         }
     }
 
